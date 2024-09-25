@@ -3,6 +3,7 @@ using Account.API.GrpcServices;
 using Account.Application;
 using Account.Infrastructure;
 using Account.Infrastructure.Persistence;
+using Common.KeyVault;
 using Common.Logging;
 using Customer.GRPC.Protos;
 using HealthChecks.UI.Client;
@@ -12,8 +13,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
-
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Key Vault configuration
+var keyVaultUri = builder.Configuration["KeyVaultSettings:KeyVaultUri"];
+if (!string.IsNullOrEmpty(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(keyVaultUri);
+}
+
+builder.Services.AddKeyVaultSecretProvider(builder.Configuration);
 
 builder.Services.AddGrpcClient<CustomerProtoService.CustomerProtoServiceClient>(c => c.Address = new Uri(builder.Configuration["GrpcSettings:CustomerUrl"]!));
 builder.Services.AddScoped<CustomerGrpcService>();
@@ -28,6 +37,13 @@ builder.Services.AddMassTransit(conf =>
     {
         cfg.Host(builder.Configuration["EventBusSettings:HostAddress"]!);
     });
+});
+builder.Services.AddScoped<ConnectionStringManager>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var secretProvider = sp.GetRequiredService<IKeyVaultSecretProvider>();
+    bool useKeyVault = config.GetValue<bool>("UseKeyVault");
+    return new ConnectionStringManager(config, secretProvider, useKeyVault);
 });
 builder.Services.Configure<MassTransitHostOptions>(conf =>
 {

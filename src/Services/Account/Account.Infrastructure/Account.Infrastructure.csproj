@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Common.KeyVault\Common.KeyVault.csproj" />
     <ProjectReference Include="..\Account.Application\Account.Application.csproj" />
   </ItemGroup>
 

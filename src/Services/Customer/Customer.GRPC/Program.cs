@@ -1,3 +1,4 @@
+using Common.KeyVault;
 using Common.Logging;
 using Customer.GRPC.Extensions;
 using Customer.GRPC.Services;
@@ -7,11 +8,25 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Key Vault configuration
+var keyVaultUri = builder.Configuration["KeyVaultSettings:KeyVaultUri"];
+if (!string.IsNullOrEmpty(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(keyVaultUri);
+}
 
-
+builder.Services.AddKeyVaultSecretProvider(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddAutoMapper(typeof(Program));
+
+builder.Services.AddScoped<ConnectionStringManager>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var secretProvider = sp.GetRequiredService<IKeyVaultSecretProvider>();
+    bool useKeyVault = config.GetValue<bool>("UseKeyVault");
+    return new ConnectionStringManager(config, secretProvider, useKeyVault);
+});
 
 builder.Services.AddGrpc();
 builder.Host.UseSerilog(SeriLogger.Configure);

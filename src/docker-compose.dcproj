@@ -10,6 +10,8 @@
     <DockerServiceName>transaction.api</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".appmod\.migration\plan.md" />
+    <None Include=".appmod\.migration\progress.md" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>

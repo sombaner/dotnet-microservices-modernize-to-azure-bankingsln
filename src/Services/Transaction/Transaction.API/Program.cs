@@ -1,3 +1,4 @@
+using Common.KeyVault;
 using Common.Logging;
 using EventBus.Messages.Common;
 using HealthChecks.UI.Client;
@@ -14,6 +15,15 @@ using Transaction.API.Services;
 using Transaction.API.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Key Vault configuration
+var keyVaultUri = builder.Configuration["KeyVaultSettings:KeyVaultUri"];
+if (!string.IsNullOrEmpty(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(keyVaultUri);
+}
+
+builder.Services.AddKeyVaultSecretProvider(builder.Configuration);
 
 builder.Services.AddMassTransit(conf =>
 {
@@ -37,6 +47,13 @@ builder.Services.AddScoped<AccountTransactionConsumer>();
 builder.Services.AddScoped<ITransactionContext, Transaction.API.Data.TransactionContext>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<ConnectionStringManager>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var secretProvider = sp.GetRequiredService<IKeyVaultSecretProvider>();
+    bool useKeyVault = config.GetValue<bool>("UseKeyVault");
+    return new ConnectionStringManager(config, secretProvider, useKeyVault);
+});
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(Program));
